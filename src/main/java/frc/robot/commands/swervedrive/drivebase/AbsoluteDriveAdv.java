@@ -7,6 +7,7 @@ package frc.robot.commands.swervedrive.drivebase;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
@@ -82,7 +83,7 @@ public class AbsoluteDriveAdv extends Command
     // Face Away from Drivers
     if (lookAway.getAsBoolean())
     {
-      headingY = -1;
+      headingY = 1;
     }
     // Face Right
     if (lookRight.getAsBoolean())
@@ -97,7 +98,19 @@ public class AbsoluteDriveAdv extends Command
     // Face Towards the Drivers
     if (lookTowards.getAsBoolean())
     {
-      headingY = 1;
+      headingY = -1;
+    }
+
+    // Adjust orientation based on alliance
+    var alliance = DriverStation.getAlliance();
+    boolean isRedAlliance = alliance.isPresent() ? alliance.get() == DriverStation.Alliance.Red : false;
+    double xVelocity = vX.getAsDouble();
+    double yVelocity = vY.getAsDouble();
+    if (isRedAlliance) {
+      xVelocity = -xVelocity;
+      yVelocity = -yVelocity;
+      headingX = -headingX;
+      headingY = -headingY;
     }
 
     // Prevent Movement After Auto
@@ -116,7 +129,7 @@ public class AbsoluteDriveAdv extends Command
       resetHeading = false;
     }
 
-    ChassisSpeeds desiredSpeeds = swerve.getTargetSpeeds(vX.getAsDouble(), vY.getAsDouble(), headingX, headingY);
+    ChassisSpeeds desiredSpeeds = swerve.getTargetSpeeds(xVelocity, yVelocity, headingX, headingY);
 
     // Limit velocity to prevent tippy
     Translation2d translation = SwerveController.getTranslation2d(desiredSpeeds);
@@ -130,7 +143,7 @@ public class AbsoluteDriveAdv extends Command
     if (headingX == 0 && headingY == 0 && Math.abs(headingAdjust.getAsDouble()) > 0)
     {
       resetHeading = true;
-      swerve.drive(translation, (Constants.OperatorConstants.TURN_CONSTANT * -headingAdjust.getAsDouble()), true);
+      swerve.drive(translation, (Constants.OperatorConstants.TURN_CONSTANT * headingAdjust.getAsDouble()), true);
     } else
     {
       swerve.drive(translation, desiredSpeeds.omegaRadiansPerSecond, true);

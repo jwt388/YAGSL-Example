@@ -71,7 +71,7 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * Enable vision odometry updates while driving.
    */
-  private final boolean             visionDriveTest     = false;
+  private final boolean             visionDriveTest = Constants.ENABLE_VISION;
   /**
    * PhotonVision class to keep an accurate odometry.
    */
@@ -84,19 +84,6 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public SwerveSubsystem(File directory)
   {
-    // Angle conversion factor is 360 / (GEAR RATIO * ENCODER RESOLUTION)
-    //  In this case the gear ratio is 12.8 motor revolutions per wheel rotation.
-    //  The encoder resolution per motor revolution is 1 per motor revolution.
-    double angleConversionFactor = SwerveMath.calculateDegreesPerSteeringRotation(12.8);
-    // Motor conversion factor is (PI * WHEEL DIAMETER IN METERS) / (GEAR RATIO * ENCODER RESOLUTION).
-    //  In this case the wheel diameter is 4 inches, which must be converted to meters to get meters/second.
-    //  The gear ratio is 6.75 motor revolutions per wheel rotation.
-    //  The encoder resolution per motor revolution is 1 per motor revolution.
-    double driveConversionFactor = SwerveMath.calculateMetersPerRotation(Units.inchesToMeters(4), 6.75);
-    System.out.println("\"conversionFactors\": {");
-    System.out.println("\t\"angle\": {\"factor\": " + angleConversionFactor + " },");
-    System.out.println("\t\"drive\": {\"factor\": " + driveConversionFactor + " }");
-    System.out.println("}");
 
     // Configure the Telemetry before creating the SwerveDrive to avoid unnecessary objects being created.
     SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
@@ -127,6 +114,16 @@ public class SwerveSubsystem extends SubsystemBase
       swerveDrive.stopOdometryThread();
     }
     setupPathPlanner();
+
+    if (isRedAlliance())
+    {
+      //Set the pose 180 degrees
+      resetOdometry(new Pose2d(15.2, 5.6, Rotation2d.fromDegrees(0)));
+    } else
+    {
+      resetOdometry(new Pose2d(1.35, 5.6, Rotation2d.fromDegrees(0)));
+    }
+    zeroGyroWithAlliance();
   }
 
   /**
@@ -425,9 +422,10 @@ public class SwerveSubsystem extends SubsystemBase
                                                                                  translationY.getAsDouble()), 0.8);
 
       // Make the robot move
-      driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(scaledInputs.getX(), scaledInputs.getY(),
-                                                                      headingX.getAsDouble(),
-                                                                      headingY.getAsDouble(),
+      double direction = isRedAlliance() ? -1:1;
+      driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(direction*scaledInputs.getX(), direction*scaledInputs.getY(),
+                                                                      direction*headingX.getAsDouble(),
+                                                                      direction*headingY.getAsDouble(),
                                                                       swerveDrive.getOdometryHeading().getRadians(),
                                                                       swerveDrive.getMaximumVelocity()));
     });
@@ -537,17 +535,20 @@ public class SwerveSubsystem extends SubsystemBase
    * @param translationX     Translation in the X direction. Cubed for smoother controls.
    * @param translationY     Translation in the Y direction. Cubed for smoother controls.
    * @param angularRotationX Angular velocity of the robot to set. Cubed for smoother controls.
+   * @param fieldRelative    Enable field relative versus robot relative.
    * @return Drive command.
    */
-  public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier angularRotationX)
+  public Command driveCommand(DoubleSupplier translationX, DoubleSupplier translationY, DoubleSupplier angularRotationX, 
+  boolean fieldRelative)
   {
     return run(() -> {
       // Make the robot move
+      double direction = isRedAlliance() && fieldRelative ? -1:1;
       swerveDrive.drive(SwerveMath.scaleTranslation(new Translation2d(
-                            translationX.getAsDouble() * swerveDrive.getMaximumVelocity(),
-                            translationY.getAsDouble() * swerveDrive.getMaximumVelocity()), 0.8),
+                            direction*translationX.getAsDouble() * swerveDrive.getMaximumVelocity(),
+                            direction*translationY.getAsDouble() * swerveDrive.getMaximumVelocity()), 0.8),
                         Math.pow(angularRotationX.getAsDouble(), 3) * swerveDrive.getMaximumAngularVelocity(),
-                        true,
+                        fieldRelative,
                         false);
     });
   }

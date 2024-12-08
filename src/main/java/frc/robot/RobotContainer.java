@@ -8,17 +8,27 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.wpilibj.AddressableLED;
+import edu.wpi.first.wpilibj.AddressableLEDBuffer;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.swervedrive.drivebase.AbsoluteDriveAdv;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import java.io.File;
+
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.auto.NamedCommands;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a "declarative" paradigm, very
@@ -33,6 +43,15 @@ public class RobotContainer
   // The robot's subsystems and commands are defined here...
   private final SwerveSubsystem       drivebase  = new SwerveSubsystem(new File(Filesystem.getDeployDirectory(),
                                                                                 "swerve/neo"));
+
+  private SendableChooser<String> driveChooser = new SendableChooser<>();
+  private SendableChooser<Command> autoChooser;
+
+  private AddressableLED m_led;
+  private AddressableLEDBuffer m_ledBuffer;
+
+  private final PowerDistribution pdp = new PowerDistribution();
+
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
   // controls are front-left positive
@@ -41,16 +60,16 @@ public class RobotContainer
   // buttons are quick rotation positions to different ways to face
   // WARNING: default buttons are on the same buttons as the ones defined in configureBindings
   AbsoluteDriveAdv closedAbsoluteDriveAdv = new AbsoluteDriveAdv(drivebase,
-                                                                 () -> -MathUtil.applyDeadband(driverXbox.getLeftY(),
-                                                                                               OperatorConstants.LEFT_Y_DEADBAND),
-                                                                 () -> -MathUtil.applyDeadband(driverXbox.getLeftX(),
-                                                                                               OperatorConstants.LEFT_X_DEADBAND),
-                                                                 () -> -MathUtil.applyDeadband(driverXbox.getRightX(),
-                                                                                               OperatorConstants.RIGHT_X_DEADBAND),
-                                                                 driverXbox.getHID()::getYButtonPressed,
-                                                                 driverXbox.getHID()::getAButtonPressed,
-                                                                 driverXbox.getHID()::getXButtonPressed,
-                                                                 driverXbox.getHID()::getBButtonPressed);
+                                  () -> Constants.SPEED_SCALING_3*MathUtil.applyDeadband(-driverXbox.getLeftY(),
+                                                                OperatorConstants.LEFT_Y_DEADBAND),
+                                  () -> Constants.SPEED_SCALING_3*MathUtil.applyDeadband(-driverXbox.getLeftX(),
+                                                                OperatorConstants.LEFT_X_DEADBAND),
+                                  () -> Constants.SPEED_SCALING_3*MathUtil.applyDeadband(-driverXbox.getRightX(),
+                                                                OperatorConstants.RIGHT_X_DEADBAND),
+                                  ()-> (driverXbox.getHID().getPOV() == 0),
+                                  ()-> (driverXbox.getHID().getPOV() == 180),
+                                  ()-> (driverXbox.getHID().getPOV() == 90),
+                                  ()-> (driverXbox.getHID().getPOV() == 270));
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
@@ -58,25 +77,32 @@ public class RobotContainer
   // left stick controls translation
   // right stick controls the desired angle NOT angular rotation
   Command driveFieldOrientedDirectAngle = drivebase.driveCommand(
-      () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
-      () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
-      () -> driverXbox.getRightX(),
-      () -> driverXbox.getRightY());
+      () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
+      () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
+      () -> driverXbox.getRightX() * -1,
+      () -> driverXbox.getRightY() * -1);
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
   // controls are front-left positive
   // left stick controls translation
   // right stick controls the angular velocity of the robot
-  Command driveFieldOrientedAnglularVelocity = drivebase.driveCommand(
-      () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
-      () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
-      () -> driverXbox.getRightX() * -1);
+  Command driveFieldOrientedAngularVelocity = drivebase.driveCommand(
+      () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
+      () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
+      () -> Constants.SPEED_SCALING_3 * driverXbox.getRightX() * -1,
+      true);
+
+  Command driveRobotOrientedAngularVelocity= drivebase.driveCommand(
+    () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
+    () -> Constants.SPEED_SCALING * MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
+    () -> Constants.SPEED_SCALING_3 * driverXbox.getRightX() * -1,
+    false);
 
   Command driveFieldOrientedDirectAngleSim = drivebase.simDriveCommand(
-      () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
-      () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
-      () -> driverXbox.getRawAxis(2));
+      () -> -MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
+      () -> -MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
+      () -> -driverXbox.getRightX());
 
   Command driveSetpointGenSim = drivebase.simDriveCommand(
       () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
@@ -88,8 +114,49 @@ public class RobotContainer
    */
   public RobotContainer()
   {
+        // Setup an addressable LED strip on a PWM channel
+    setupLEDs();
+    
+    // Setup Auto commands and chooser
+    NamedCommands.registerCommand(
+        "SayHello",
+        new InstantCommand(()->DataLogManager.log("Hello ...")));
+
+    NamedCommands.registerCommand(
+        "SayGoodbye",
+        new InstantCommand(()->DataLogManager.log("... Goodbye")));
+
+    NamedCommands.registerCommand(
+        "Set LED Red",
+        new InstantCommand(()->solidRGB(128,0,0)));
+
+    NamedCommands.registerCommand(
+        "Set LED Green",
+        new InstantCommand(()->solidRGB(0,128,0)));
+
+    NamedCommands.registerCommand(
+        "Set LED Blue",
+        new InstantCommand(()->solidRGB(0,0,128)));
+
+
+    autoChooser = AutoBuilder.buildAutoChooser();
+    SmartDashboard.putData(autoChooser);
+
+    // Publish PDP data for dashboard and logging
+    SmartDashboard.putData(pdp);
+
     // Configure the trigger bindings
     configureBindings();
+
+        // Setup chooser for selecting drive mode
+        driveChooser.setDefaultOption("Drive Mode - AngularVelocity", "angular");
+        driveChooser.addOption("Drive Mode - Direct Angle", "direct");
+        driveChooser.addOption("Drive Mode - Advanced", "advanced");
+        driveChooser.addOption("Drive Mode - Robot Oriented", "robot");
+        SmartDashboard.putData(driveChooser);
+    
+        setDriveMode();
+        solidRGB(128,128,0);
   }
 
   /**
@@ -114,11 +181,10 @@ public class RobotContainer
       driverXbox.back().whileTrue(drivebase.centerModulesCommand());
       driverXbox.leftBumper().onTrue(Commands.none());
       driverXbox.rightBumper().onTrue(Commands.none());
-      drivebase.setDefaultCommand(
-          !RobotBase.isSimulation() ? driveFieldOrientedAnglularVelocity : driveFieldOrientedDirectAngleSim);
+
     } else
     {
-      driverXbox.a().onTrue((Commands.runOnce(drivebase::zeroGyro)));
+      driverXbox.a().onTrue((Commands.runOnce(drivebase::zeroGyroWithAlliance)));
       driverXbox.x().onTrue(Commands.runOnce(drivebase::addFakeVisionReading));
       driverXbox.b().whileTrue(
           drivebase.driveToPose(
@@ -129,8 +195,6 @@ public class RobotContainer
       driverXbox.back().whileTrue(Commands.none());
       driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
       driverXbox.rightBumper().onTrue(Commands.none());
-      drivebase.setDefaultCommand(
-          !RobotBase.isSimulation() ? driveFieldOrientedDirectAngle : driveFieldOrientedDirectAngleSim);
     }
   }
 
@@ -141,17 +205,58 @@ public class RobotContainer
    */
   public Command getAutonomousCommand()
   {
-    // An example command will be run in autonomous
-    return drivebase.getAutonomousCommand("New Auto");
+    return autoChooser.getSelected();
   }
 
   public void setDriveMode()
   {
-    configureBindings();
+    switch (driveChooser.getSelected()) {
+
+      case "direct":
+        drivebase.setDefaultCommand(driveFieldOrientedDirectAngle);
+        return;
+
+      case "advanced":
+        drivebase.setDefaultCommand(closedAbsoluteDriveAdv);
+        return;
+
+      case "robot":
+        drivebase.setDefaultCommand(driveRobotOrientedAngularVelocity);
+        return;
+
+      case "angular":
+      default:
+        drivebase.setDefaultCommand(driveFieldOrientedAngularVelocity);        
+
+
+    }
   }
 
   public void setMotorBrake(boolean brake)
   {
     drivebase.setMotorBrake(brake);
+  }
+
+  // Setup an interface for an addressable LED strip
+  private void setupLEDs(){
+    m_led = new AddressableLED(0);
+
+    // Create the buffer. Start empty output
+    // Length is expensive to set, so only set it once, then just update data
+    m_ledBuffer = new AddressableLEDBuffer(30);
+    m_led.setLength(m_ledBuffer.getLength());
+
+    // Set the data
+    m_led.setData(m_ledBuffer);
+    m_led.start();
+  }
+
+  // Set all LEDs in the strip to a solid color
+  private void solidRGB(int red, int green, int blue) {
+    for (var i = 0; i < m_ledBuffer.getLength(); i++) {
+      // Sets the specified LED to the RGB values for red
+      m_ledBuffer.setRGB(i, red, green, blue);
+    }
+    m_led.setData(m_ledBuffer);
   }
 }
