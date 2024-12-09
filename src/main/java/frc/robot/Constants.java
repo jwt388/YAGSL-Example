@@ -27,7 +27,7 @@ public final class Constants
   public static final double SPEED_SCALING = 1.0; // Scale joystick inputs to limit speed for small practice spaces
   public static final double SPEED_SCALING_3 = Math.pow(SPEED_SCALING, 1/3.0); // Scale for inputs^3
 
-  public static final Boolean ENABLE_VISION  = false;
+  public static final Boolean ENABLE_VISION  = true;
   // Maximum speed of the robot in meters per second, used to limit acceleration.
 
 //  public static final class AutonConstants

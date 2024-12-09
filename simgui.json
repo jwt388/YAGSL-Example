@@ -1,26 +1,14 @@
 {
   "HALProvider": {
+    "Addressable LEDs": {
+      "0": {
+        "columns": 30
+      },
+      "window": {
+        "visible": true
+      }
+    },
     "Other Devices": {
-      "SPARK MAX [2]": {
-        "header": {
-          "open": true
-        }
-      },
-      "SPARK MAX [4]": {
-        "header": {
-          "open": true
-        }
-      },
-      "SPARK MAX [5]": {
-        "header": {
-          "open": true
-        }
-      },
-      "SPARK MAX [7]": {
-        "header": {
-          "open": true
-        }
-      },
       "Talon FX (v6)[2]/Rotor Sensor": {
         "header": {
           "open": true
@@ -60,6 +48,7 @@
       "/LiveWindow/Ungrouped/PIDController[1]": "PIDController",
       "/LiveWindow/Ungrouped/Pigeon 2 [13]": "Gyro",
       "/LiveWindow/Ungrouped/Scheduler": "Scheduler",
+      "/SmartDashboard/Alerts": "Alerts",
       "/SmartDashboard/Encoders": "Alerts",
       "/SmartDashboard/Field": "Field2d",
       "/SmartDashboard/IMU": "Alerts",
@@ -68,6 +57,7 @@
       "/SmartDashboard/Pigeon 2 (v6) [13]": "Gyro",
       "/SmartDashboard/Pigeon 2 [13]": "Gyro",
       "/SmartDashboard/SendableChooser[0]": "String Chooser",
+      "/SmartDashboard/SendableChooser[1]": "String Chooser",
       "/SmartDashboard/Swerve Drive": "Alerts",
       "/SmartDashboard/VisionSystemSim-Vision/Sim Field": "Field2d",
       "/SmartDashboard/navX-Sensor[1]": "Gyro",
@@ -111,6 +101,16 @@
         "right": 2961,
         "top": 79,
         "width": 16.541748046875,
+        "window": {
+          "visible": true
+        }
+      },
+      "/SmartDashboard/SendableChooser[0]": {
+        "window": {
+          "visible": true
+        }
+      },
+      "/SmartDashboard/SendableChooser[1]": {
         "window": {
           "visible": true
         }
