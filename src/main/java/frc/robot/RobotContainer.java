@@ -104,7 +104,7 @@ public class RobotContainer
       () -> -MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
       () -> -driverXbox.getRightX());
 
-  Command driveSetpointGenSim = drivebase.simDriveCommand(
+  Command driveSetpointGenSim = drivebase.driveWithSetpointGenerator(
       () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
       () -> MathUtil.applyDeadband(driverXbox.getLeftX(), OperatorConstants.LEFT_X_DEADBAND),
       () -> driverXbox.getRawAxis(2));

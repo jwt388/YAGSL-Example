@@ -26,7 +26,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -328,8 +327,8 @@ public class SwerveSubsystem extends SubsystemBase
   {
 // Create the constraints to use while pathfinding
     PathConstraints constraints = new PathConstraints(
-        swerveDrive.getMaximumVelocity(), 4.0,
-        swerveDrive.getMaximumAngularVelocity(), Units.degreesToRadians(720));
+        swerveDrive.getMaximumChassisVelocity(), 4.0,
+        swerveDrive.getMaximumChassisAngularVelocity(), Units.degreesToRadians(720));
 
 // Since AutoBuilder is configured, we can use it to build pathfinding commands
     return AutoBuilder.pathfindToPose(
@@ -351,7 +350,7 @@ public class SwerveSubsystem extends SubsystemBase
   throws IOException, ParseException
   {
     SwerveSetpointGenerator setpointGenerator = new SwerveSetpointGenerator(RobotConfig.fromGUISettings(),
-                                                                            swerveDrive.getMaximumAngularVelocity());
+                                                                            swerveDrive.getMaximumChassisAngularVelocity());
     AtomicReference<SwerveSetpoint> prevSetpoint
         = new AtomicReference<>(new SwerveSetpoint(swerveDrive.getRobotVelocity(),
                                                    swerveDrive.getStates(),
@@ -382,17 +381,16 @@ public class SwerveSubsystem extends SubsystemBase
                                             DoubleSupplier rotationX)
   {
     SwerveController swerveController = swerveDrive.getSwerveController();
-    swerveDrive.setDriveMotorModel(DCMotor.getNEO(1));
     try
     {
       return driveWithSetpointGenerator(() -> {
         Translation2d scaledInputs = SwerveMath.scaleTranslation(new Translation2d(
-            translationX.getAsDouble() * swerveDrive.getMaximumVelocity(),
-            translationY.getAsDouble() * swerveDrive.getMaximumVelocity()), 0.8);
+            translationX.getAsDouble() * swerveDrive.getMaximumChassisVelocity(),
+            translationY.getAsDouble() * swerveDrive.getMaximumChassisVelocity()), 0.8);
 
         return new ChassisSpeeds(scaledInputs.getX(),
                                  scaledInputs.getY(),
-                                 rotationX.getAsDouble() * swerveDrive.getMaximumAngularVelocity());
+                                 rotationX.getAsDouble() * swerveDrive.getMaximumChassisAngularVelocity());
       });
     } catch (Exception e)
     {
@@ -427,15 +425,15 @@ public class SwerveSubsystem extends SubsystemBase
                                                                       direction*headingX.getAsDouble(),
                                                                       direction*headingY.getAsDouble(),
                                                                       swerveDrive.getOdometryHeading().getRadians(),
-                                                                      swerveDrive.getMaximumVelocity()));
+                                                                      swerveDrive.getMaximumChassisVelocity()));
     });
   }
 
   /**
    * Command to drive the robot using translative values and heading as a setpoint.
    *
-   * @param translationX Translation in the X direction.
-   * @param translationY Translation in the Y direction.
+   * @param translationX Translation in the X direction. [-1, 1]
+   * @param translationY Translation in the Y direction. [-1, 1]
    * @param rotation     Rotation as a value between [-1, 1] converted to radians.
    * @return Drive command.
    */
@@ -448,7 +446,7 @@ public class SwerveSubsystem extends SubsystemBase
                                                                       translationY.getAsDouble(),
                                                                       rotation.getAsDouble() * Math.PI,
                                                                       swerveDrive.getOdometryHeading().getRadians(),
-                                                                      swerveDrive.getMaximumVelocity()));
+                                                                      swerveDrive.getMaximumChassisVelocity()));
     });
   }
 
@@ -506,18 +504,6 @@ public class SwerveSubsystem extends SubsystemBase
   }
 
   /**
-   * Sets the maximum speed of the swerve drive.
-   *
-   * @param maximumSpeedInMetersPerSecond the maximum speed to set for the swerve drive in meters per second
-   */
-  public void setMaximumSpeed(double maximumSpeedInMetersPerSecond)
-  {
-    swerveDrive.setMaximumSpeed(maximumSpeedInMetersPerSecond,
-                                false,
-                                swerveDrive.swerveDriveConfiguration.physicalCharacteristics.optimalVoltage);
-  }
-
-  /**
    * Replaces the swerve module feedforward with a new SimpleMotorFeedforward object.
    *
    * @param kS the static gain of the feedforward
@@ -545,9 +531,9 @@ public class SwerveSubsystem extends SubsystemBase
       // Make the robot move
       double direction = isRedAlliance() && fieldRelative ? -1:1;
       swerveDrive.drive(SwerveMath.scaleTranslation(new Translation2d(
-                            direction*translationX.getAsDouble() * swerveDrive.getMaximumVelocity(),
-                            direction*translationY.getAsDouble() * swerveDrive.getMaximumVelocity()), 0.8),
-                        Math.pow(angularRotationX.getAsDouble(), 3) * swerveDrive.getMaximumAngularVelocity(),
+                            direction*translationX.getAsDouble() * swerveDrive.getMaximumChassisVelocity(),
+                            direction*translationY.getAsDouble() * swerveDrive.getMaximumChassisVelocity()), 0.8),
+                        Math.pow(angularRotationX.getAsDouble(), 3) * swerveDrive.getMaximumChassisAngularVelocity(),
                         fieldRelative,
                         false);
     });
