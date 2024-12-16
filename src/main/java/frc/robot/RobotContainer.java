@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -57,17 +58,17 @@ public class RobotContainer
    * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
    */
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
-                                                                driverXbox::getLeftX,
-                                                                driverXbox::getLeftY)
-                                                            .withControllerRotationAxis(driverXbox::getRightX)
+                                                                () -> driverXbox.getLeftY() * -1,
+                                                                () -> driverXbox.getLeftX() * -1)
+                                                            .withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
                                                             .deadband(OperatorConstants.DEADBAND)
                                                             .scaleTranslation(0.8);
 
   /**
    * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
    */
-  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(driverXbox::getRightX,
-                                                                                             driverXbox::getRightY)
+  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(() -> driverXbox.getRightY() * -1,
+                                                                                             () -> driverXbox.getRightX() * -1)
                                                            .headingWhile(true);
 
 
@@ -76,14 +77,16 @@ public class RobotContainer
   // controls are front-left positive
   // left stick controls translation
   // right stick controls the desired angle NOT angular rotation
-  Command driveFieldOrientedDirectAngle = drivebase.driveFieldOriented(driveDirectAngle);
+  Command driveFieldOrientedDirectAngle = drivebase.driveFieldOriented(driveDirectAngle)
+                                          .withName("DirectAngle");
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
   // controls are front-left positive
   // left stick controls translation
   // right stick controls the angular velocity of the robot
-  Command driveFieldOrientedAnglularVelocity = drivebase.driveFieldOriented(driveAngularVelocity);
+  Command driveFieldOrientedAnglularVelocity = drivebase.driveFieldOriented(driveAngularVelocity)
+                                              .withName("AngularVelocity");
 
   Command driveSetpointGen = drivebase.driveWithSetpointGeneratorFieldRelative(driveDirectAngle);
 
@@ -114,7 +117,9 @@ public class RobotContainer
   public RobotContainer()
   {
     // Configure the trigger bindings
-    configureBindings();
+  configureBindings();
+  SmartDashboard.putData(drivebase);
+
   }
 
   /**
@@ -127,9 +132,7 @@ public class RobotContainer
   private void configureBindings()
   {
     // (Condition) ? Return-On-True : Return-on-False
-    drivebase.setDefaultCommand(!RobotBase.isSimulation() ?
-                                driveFieldOrientedDirectAngle :
-                                driveFieldOrientedDirectAngleSim);
+    drivebase.setDefaultCommand(driveFieldOrientedAnglularVelocity); // driveFieldOrientedDirectAngle or driveFieldOrientedAnglularVelocity
 
     if (Robot.isSimulation())
     {
@@ -158,7 +161,7 @@ public class RobotContainer
       driverXbox.start().whileTrue(Commands.none());
       driverXbox.back().whileTrue(Commands.none());
       driverXbox.leftBumper().whileTrue(Commands.runOnce(drivebase::lock, drivebase).repeatedly());
-      driverXbox.rightBumper().onTrue(Commands.none());
+      driverXbox.rightBumper().onTrue(driveFieldOrientedDirectAngle);
     }
 
   }
@@ -176,7 +179,8 @@ public class RobotContainer
 
   public void setDriveMode()
   {
-    configureBindings();
+    // configureBindings();
+    drivebase.setDefaultCommand(driveFieldOrientedDirectAngle);
   }
 
   public void setMotorBrake(boolean brake)

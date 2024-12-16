@@ -38,6 +38,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Force;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Notifier;
@@ -471,6 +472,7 @@ public class SwerveDrive
    */
   public void driveFieldOriented(ChassisSpeeds velocity)
   {
+    DataLogManager.log(" Omega: " + velocity.omegaRadiansPerSecond + " , Heading: " + getOdometryHeading().getDegrees());
     velocity.toRobotRelativeSpeeds(getOdometryHeading());
     drive(velocity);
   }
