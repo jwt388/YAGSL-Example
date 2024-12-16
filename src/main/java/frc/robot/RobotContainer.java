@@ -41,7 +41,7 @@ public class RobotContainer
   // left stick controls translation
   // right stick controls the rotational velocity 
   // POV triggers quick rotation positions to different ways to face
-  AbsoluteDriveAdv closedAbsoluteDriveAdv = new AbsoluteDriveAdv(drivebase,
+  Command closedAbsoluteDriveAdv = new AbsoluteDriveAdv(drivebase,
                                                                  () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1,
                                                                                                OperatorConstants.LEFT_Y_DEADBAND),
                                                                  () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1,
@@ -51,7 +51,8 @@ public class RobotContainer
                                                                  ()-> (driverXbox.getHID().getPOV() == 0),
                                                                  ()-> (driverXbox.getHID().getPOV() == 180),
                                                                  ()-> (driverXbox.getHID().getPOV() == 90),
-                                                                 ()-> (driverXbox.getHID().getPOV() == 270));
+                                                                 ()-> (driverXbox.getHID().getPOV() == 270))
+                                                                 .withName("Advanced");
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
@@ -59,7 +60,7 @@ public class RobotContainer
   // left stick controls translation
   // right stick controls the desired angle NOT angular rotation
   // This command prevents heading change when the comand starts
-  AbsoluteDrive absoluteDrive = new AbsoluteDrive(drivebase,
+  Command absoluteDrive = new AbsoluteDrive(drivebase,
                                                                  () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1,
                                                                                                OperatorConstants.LEFT_Y_DEADBAND),
                                                                  () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1,
@@ -67,7 +68,9 @@ public class RobotContainer
                                                                  () -> MathUtil.applyDeadband(driverXbox.getRightX() * -1,
                                                                                                OperatorConstants.RIGHT_X_DEADBAND),
                                                                  () -> MathUtil.applyDeadband(driverXbox.getRightY() * -1,
-                                                                                               OperatorConstants.RIGHT_X_DEADBAND));
+                                                                                               OperatorConstants.RIGHT_X_DEADBAND))
+                                                                  .withName("Absolute");
+
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
@@ -78,7 +81,8 @@ public class RobotContainer
       () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
       () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
       () -> driverXbox.getRightX() * -1,
-      () -> driverXbox.getRightY() * -1);
+      () -> driverXbox.getRightY() * -1)
+      .withName("DirectAngle");
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
@@ -88,12 +92,8 @@ public class RobotContainer
   Command driveFieldOrientedAngularVelocity = drivebase.driveCommand(
       () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
       () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
-      () -> driverXbox.getRightX() * -1);
-
-  Command driveSetpointGen = drivebase.driveWithSetpointGenerator(
-        () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
-        () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
-        () -> driverXbox.getRightX() * -1);
+      () -> driverXbox.getRightX() * -1)
+      .withName("AngularVelocity");
 
   Command driveFieldOrientedDirectAngleSim = drivebase.simDriveCommand(
       () -> MathUtil.applyDeadband(driverXbox.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND),
@@ -134,6 +134,9 @@ public class RobotContainer
     driveChooser.addOption("Drive Mode - Absolute Advanced", DriveMode.ABSOLUTE_ADVANCED);
     driveChooser.addOption("Drive Mode - Set Point Gen", DriveMode.SET_POINT_GEN);
     SmartDashboard.putData(driveChooser);
+
+    // Add drive subsystem commands for dashboard and log file
+    SmartDashboard.putData(drivebase);
 
     setDriveMode();
   }
@@ -185,6 +188,7 @@ public class RobotContainer
    */
   public Command getAutonomousCommand()
   {
+    // drivebase.removeDefaultCommand();
     // An example command will be run in autonomous
     return drivebase.getAutonomousCommand("New Auto");
   }
@@ -210,6 +214,13 @@ public class RobotContainer
         return;
 
       case SET_POINT_GEN:
+        // This command does not work if instantiated a significant time before it is run
+        Command driveSetpointGen = drivebase.driveWithSetpointGenerator(
+          () -> MathUtil.applyDeadband(driverXbox.getLeftY() * -1, OperatorConstants.LEFT_Y_DEADBAND),
+          () -> MathUtil.applyDeadband(driverXbox.getLeftX() * -1, OperatorConstants.LEFT_X_DEADBAND),
+          () -> driverXbox.getRightX() * -1)
+          .withName("SetPointGen");
+
         drivebase.setDefaultCommand(driveSetpointGen);
         return;
 
