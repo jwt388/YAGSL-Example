@@ -59,7 +59,7 @@ public class RobotContainer
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(drivebase.getSwerveDrive(),
                                                                 () -> driverXbox.getLeftY() * -1,
                                                                 () -> driverXbox.getLeftX() * -1)
-                                                            .withControllerRotationAxis(driverXbox::getRightX)
+                                                            .withControllerRotationAxis(() -> driverXbox.getRightX() * -1)
                                                             .deadband(OperatorConstants.DEADBAND)
                                                             .scaleTranslation(0.8)
                                                             .allianceRelativeControl(true);
@@ -67,10 +67,17 @@ public class RobotContainer
   /**
    * Clone's the angular velocity input stream and converts it to a fieldRelative input stream.
    */
-  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(driverXbox::getRightX,
-                                                                                             driverXbox::getRightY)
+  SwerveInputStream driveDirectAngle = driveAngularVelocity.copy().withControllerHeadingAxis(() -> driverXbox.getRightX() * -1,
+                                                                                             () -> driverXbox.getRightY() * -1)
                                                            .headingWhile(true);
 
+  /**
+   * Clone's the angular velocity input stream and converts it to a robotRelative input stream.
+   */
+  SwerveInputStream driveRobotOriented = driveAngularVelocity.copy().robotRelative(true)
+                                                                    .allianceRelativeControl(false);
+
+  Command driveRobotOrientedAngularVelocity = drivebase.driveFieldOriented(driveRobotOriented);
 
   // Applies deadbands and inverts controls because joysticks
   // are back-right positive while robot
@@ -130,8 +137,8 @@ public class RobotContainer
   {
     // (Condition) ? Return-On-True : Return-on-False
     drivebase.setDefaultCommand(!RobotBase.isSimulation() ?
-                                driveFieldOrientedDirectAngle :
-                                driveFieldOrientedDirectAngleSim);
+                                driveRobotOrientedAngularVelocity :
+                                driveRobotOrientedAngularVelocity);
 
     if (Robot.isSimulation())
     {

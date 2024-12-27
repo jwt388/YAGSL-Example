@@ -660,7 +660,8 @@ public class SwerveInputStream implements Supplier<ChassisSpeeds>
   {
     if (robotRelative.isPresent() && robotRelative.get().getAsBoolean())
     {
-      return ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, swerveDrive.getOdometryHeading());
+      return ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds,
+                                                  swerveDrive.getOdometryHeading().unaryMinus());
     }
     return fieldRelativeSpeeds;
   }
