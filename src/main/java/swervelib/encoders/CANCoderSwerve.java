@@ -6,6 +6,7 @@ import static edu.wpi.first.units.Units.Milliseconds;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
+import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
@@ -18,6 +19,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.DriverStation;
 
 /**
  * Swerve Absolute Encoder for CTRE CANCoders.
@@ -94,6 +96,9 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
     magnetHealth = encoder.getMagnetHealth();
     angle = encoder.getAbsolutePosition();
     velocity = encoder.getVelocity();
+
+    BaseStatusSignal.setUpdateFrequencyForAll(50.0, magnetHealth, angle, velocity);
+
     magnetFieldLessThanIdeal = new Alert(
         "Encoders",
         "CANCoder " + encoder.getDeviceID() + " magnetic field is less than ideal.",
@@ -157,8 +162,7 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
   public double getAbsolutePosition()
   {
     readingError = false;
-    MagnetHealthValue strength = magnetHealth.refresh().getValue();
-    angle.refresh();
+    MagnetHealthValue strength = magnetHealth.getValue();
 
     magnetFieldLessThanIdeal.set(strength != MagnetHealthValue.Magnet_Green);
     if (strength == MagnetHealthValue.Magnet_Invalid || strength == MagnetHealthValue.Magnet_Red)
@@ -243,6 +247,13 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
   @Override
   public double getVelocity()
   {
-    return velocity.refresh().getValue().in(DegreesPerSecond);
+    // This is called first, so refresh the signals here for now. Should reorder and move to getAbsolutePosition
+    var refreshStatus = BaseStatusSignal.refreshAll(magnetHealth, angle, velocity);
+    if (refreshStatus != StatusCode.OK)
+    {
+      DriverStation.reportWarning("Error refreshing CANcoder", false);
+    }
+
+    return velocity.getValue().in(DegreesPerSecond);
   }
 }
