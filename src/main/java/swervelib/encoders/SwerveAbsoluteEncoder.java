@@ -33,6 +33,11 @@ public abstract class SwerveAbsoluteEncoder
   public abstract void configure(boolean inverted);
 
   /**
+   * Refresh the data for the encoder.
+   */
+  public void refreshData() {};
+
+  /**
    * Get the absolute position of the encoder.
    *
    * @return Absolute position in degrees from [0, 360).

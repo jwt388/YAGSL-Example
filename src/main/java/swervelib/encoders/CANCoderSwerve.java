@@ -159,9 +159,17 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
    * @return Absolute position in degrees from [0, 360).
    */
   @Override
-  public double getAbsolutePosition()
+  public void refreshData()
   {
     readingError = false;
+
+    // Refresh all the signals
+    var refreshStatus = BaseStatusSignal.refreshAll(magnetHealth, angle, velocity);
+    if (refreshStatus != StatusCode.OK)
+    {
+      readingError = true;
+    }
+
     MagnetHealthValue strength = magnetHealth.getValue();
 
     magnetFieldLessThanIdeal.set(strength != MagnetHealthValue.Magnet_Green);
@@ -169,7 +177,6 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
     {
       readingError = true;
       readingFaulty.set(true);
-      return 0;
     } else
     {
       readingFaulty.set(false);
@@ -185,6 +192,7 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
         break;
       }
       angle.waitForUpdate(STATUS_TIMEOUT_SECONDS);
+      DriverStation.reportWarning("Retry CANCoder reading",false);
     }
     if (angle.getStatus() != StatusCode.OK)
     {
@@ -194,6 +202,16 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
     {
       readingIgnored.set(false);
     }
+  }
+
+  /**
+   * Get the absolute position of the encoder. Sets {@link SwerveAbsoluteEncoder#readingError} on erroneous readings.
+   *
+   * @return Absolute position in degrees from [0, 360).
+   */
+  @Override
+  public double getAbsolutePosition()
+  {
     // Convert from Rotations to Degrees.
     return angle.getValueAsDouble() * 360;
   }
@@ -247,13 +265,6 @@ public class CANCoderSwerve extends SwerveAbsoluteEncoder
   @Override
   public double getVelocity()
   {
-    // This is called first, so refresh the signals here for now. Should reorder and move to getAbsolutePosition
-    var refreshStatus = BaseStatusSignal.refreshAll(magnetHealth, angle, velocity);
-    if (refreshStatus != StatusCode.OK)
-    {
-      DriverStation.reportWarning("Error refreshing CANcoder", false);
-    }
-
     return velocity.getValue().in(DegreesPerSecond);
   }
 }
